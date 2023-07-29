@@ -21,6 +21,7 @@ import java.util.*
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        testTokenizer()
         setContent {
             MyComposeApplicationTheme {
                 // A surface container using the 'background' color from the theme

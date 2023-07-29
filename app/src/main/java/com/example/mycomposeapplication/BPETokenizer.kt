@@ -196,13 +196,13 @@ class BPETokenizer(context: Context, bpePath: String = "vocab.gz") {
     fun decode(tokens: List<Int>): String {
 //        val text = tokens.map { decoder[it]!! }.joinToString("")
         val text = tokens.joinToString("") { decoder[it]!! }
-        return text.toByteArray().toString(Charsets.UTF_8).replace("</w>".toRegex(), " ")
+        return text.toByteArray().toString(Charsets.UTF_8).replace("</w>", " ")
     }
 
 
     fun tokenize(text: String, contextLength: Int = 77, truncate: Boolean = false): Tensor {
         val sotToken: Int = encoder["<|startoftext|>"]!!
-        val eotToken: Int = encoder["<|startoftext|>"]!!
+        val eotToken: Int = encoder["<|endoftext|>"]!!
 //    val allTokens: MutableList<MutableList<Int>> = ArrayList()
         val tokens: MutableList<Int> = ArrayList()
         tokens.add(sotToken)
