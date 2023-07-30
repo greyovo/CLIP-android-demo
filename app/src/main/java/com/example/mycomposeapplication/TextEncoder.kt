@@ -2,10 +2,7 @@ package com.example.mycomposeapplication
 
 import android.content.Context
 import android.util.Log
-import org.pytorch.IValue
-import org.pytorch.LiteModuleLoader
-import org.pytorch.Module
-import org.pytorch.Tensor
+import org.pytorch.*
 
 class TextEncoder(private val context: Context) {
     private val modelPath = "clip-text-encoder.ptl"
@@ -28,14 +25,6 @@ class TextEncoder(private val context: Context) {
         if (module == null) {
             loadModel()
         }
-        return module?.forward(IValue.from(input))?.toTensor()
-    }
-
-    fun encode(input: String): Tensor? {
-        if (module == null) {
-            loadModel()
-        }
-
         return module?.forward(IValue.from(input))?.toTensor()
     }
 }

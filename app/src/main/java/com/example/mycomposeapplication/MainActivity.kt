@@ -98,35 +98,20 @@ class MainActivity : ComponentActivity() {
         val bitmap = BitmapFactory.decodeStream(assets.open("image.jpg"))
         Log.i("testImageEncoder", "start...")
         val time = System.currentTimeMillis()
-        val total = 500
-        for (i in 0..total) {
-            imageEncoder?.encode(bitmap)
-            if (i % 10 == 0) {
-                encodeImageState.value = "Processing: $i / $total"
-            }
-        }
         val output = imageEncoder?.encode(bitmap)
-        encodeImageState.value = "Processing: Done $total"
         encodeImageCost.value = System.currentTimeMillis() - time
         Log.d("testImageEncoder", Arrays.toString(output?.dataAsFloatArray))
     }
 
-    // 定义一个后台任务
-//    suspend fun doBackgroundTask(): Int {
-//        var progress = 0
-//        repeat(10) {
-//            delay(1000) // 模拟耗时任务
-//            progress += 10
-//        }
-//        return progress
-//    }
-
-    fun testBatchEncodeImage() {
+    private fun testBatchEncodeImage() {
+        if (imageEncoder == null) {
+            imageEncoder = ImageEncoder(this)
+        }
         // 在UI线程中启动一个协程
         lifecycleScope.launch(Dispatchers.Main) {
             // 在后台线程中执行任务
             val result = withContext(Dispatchers.Default) {
-                val total = 3000
+                val total = 100
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
                     val bitmap = BitmapFactory.decodeStream(assets.open("image.jpg"))

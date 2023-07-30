@@ -2,9 +2,10 @@ package com.example.mycomposeapplication
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Matrix
+import android.media.Image
+import android.media.ImageReader
 import android.util.Log
 import org.pytorch.*
 import org.pytorch.torchvision.TensorImageUtils
@@ -67,12 +68,25 @@ class ImageEncoder(private val context: Context) {
     }
 
     private fun toTensor(bitmap: Bitmap): Tensor {
-        return TensorImageUtils.bitmapToFloat32Tensor(
+        val mInputTensorBuffer = Tensor.allocateFloatBuffer(3 * 224 * 224)
+        val mInputTensor = Tensor.fromBlob(mInputTensorBuffer, longArrayOf(1, 3, 224, 224))
+        TensorImageUtils.bitmapToFloatBuffer(
             bitmap,
+            0, 0,
+            224, 224,
             floatArrayOf(0.485f, 0.456f, 0.406f),
             floatArrayOf(0.229f, 0.224f, 0.225f),
-            MemoryFormat.CHANNELS_LAST
+            mInputTensorBuffer,
+            0
         )
+        return mInputTensor
+//        return TensorImageUtils.bitmapToFloat32Tensor(
+//            bitmap,
+//            floatArrayOf(0.485f, 0.456f, 0.406f),
+//            floatArrayOf(0.229f, 0.224f, 0.225f),
+//            MemoryFormat.CHANNELS_LAST
+////            MemoryFormat.CONTIGUOUS
+//        )
 //        floatArrayOf(0.485f, 0.456f, 0.406f)
 //        floatArrayOf(0.229f, 0.224f, 0.225f)
 //        (0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)
@@ -94,9 +108,25 @@ class ImageEncoder(private val context: Context) {
         if (module == null) {
             loadModel()
         }
-        val resized = resize(input)
-        val cropped = centerCrop(resized)
-        val tensor = toTensor(toRGB(cropped))
+//        val resized = resize(input)
+//        val width = input.width
+//        val height = input.height
+//
+//        // 计算缩放比例
+//        val scale = (224f / width).coerceAtMost(224f / height)
+//
+//        // 创建缩放后的Bitmap
+//        val matrix = Matrix()
+//        matrix.postScale(scale, scale)
+//        val resized = Bitmap.createBitmap(input, 0, 0, width, height, matrix, false)
+//
+////        val cropped = centerCrop(resized)
+//        // 计算裁切位置
+//        val x: Int = (resized.width - 224) / 2
+//        val y: Int = (resized.height - 224) / 2
+//        val cropped = Bitmap.createBitmap(resized, x, y, 224, 224)
+
+        val tensor = toTensor(input)
 
         return module?.forward(IValue.from(tensor))?.toTensor()
     }
