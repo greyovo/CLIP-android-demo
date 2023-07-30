@@ -42,21 +42,18 @@ fun createCharDict(): Map<Int, Char> {
 fun readGzipFile(context: Context, assetName: String): List<String> {
     val filePath = assetFilePath(context, assetName)
     val result = mutableListOf<String>()
-//    val sb = StringBuilder()
-//    val file = File(, assetName)
     val inputStream = GZIPInputStream(FileInputStream(File(filePath!!)))
     val reader = BufferedReader(InputStreamReader(inputStream, "UTF-8"))
     var line: String?
     while (reader.readLine().also { line = it } != null) {
         result.add(line!!)
-//        sb.append(line!!)
     }
     reader.close()
     inputStream.close()
     return result
 }
 
-class BPETokenizer(context: Context, bpePath: String = "vocab") {
+class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
 
     private val byteEncoder = createCharDict()
     private val byteDecoder = byteEncoder.map { it.value to it.key }.toMap()
@@ -119,7 +116,6 @@ class BPETokenizer(context: Context, bpePath: String = "vocab") {
             val newWord = mutableListOf<String>()
             var i = 0
             while (i < word.size) {
-//                val j = word.indexOf(first, startIndex = i)
                 val j = word.subList(i, word.size).indexOf(first)
                 if (j != -1) {
                     newWord.addAll(word.subList(i, j + i))

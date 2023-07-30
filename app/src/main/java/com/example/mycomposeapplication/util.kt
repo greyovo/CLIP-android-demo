@@ -12,7 +12,6 @@ import java.io.IOException
 @Throws(IOException::class)
 fun assetFilePath(context: Context, assetName: String): String? {
     val file = File(context.filesDir, assetName)
-    val f = context.assets.list("")
     if (file.exists() && file.length() > 0) {
         return file.absolutePath
     }

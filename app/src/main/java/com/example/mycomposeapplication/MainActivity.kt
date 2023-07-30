@@ -35,8 +35,8 @@ class MainActivity : ComponentActivity() {
                         Button(onClick = { testTokenizer() }) {
                             Text(text = "testTokenizer")
                         }
-                        Button(onClick = { testLoadJson() }) {
-                            Text(text = "testLoadJson")
+                        Button(onClick = { testTextEncoder() }) {
+                            Text(text = "testTextEncoder")
                         }
                     }
                 }
@@ -46,8 +46,13 @@ class MainActivity : ComponentActivity() {
 
     var tokenizer: BPETokenizer? = null
 
-    private fun testLoadJson() {
-        val json = loadJsonFromAssets(this, "vocab.json")
+    private fun testTextEncoder() {
+        val encoder = TextEncoder(this)
+        val text = "A bird flying in the sky, cloudy"
+        Log.i("testTextEncoder", "start testTextEncoder")
+        val input = tokenizer!!.tokenize(text)
+        val output = encoder.encode(input)
+        Log.d("testTextEncoder", Arrays.toString(output?.dataAsFloatArray))
     }
 
     private fun testTokenizer() {

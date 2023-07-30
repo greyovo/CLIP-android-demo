@@ -2,7 +2,23 @@ buildscript {
     ext {
         compose_ui_version = '1.1.1'
     }
-}// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+//    def ALIYUN_REPOSITORY = 'https://maven.aliyun.com/repository/public/'
+//    def ALIYUN_JCENTER = 'https://maven.aliyun.com/repository/jcenter/'
+//    def ALIYUN_GOOGLE = 'https://maven.aliyun.com/repository/google/'
+//    def ALIYUN_GRADLE_PLUGIN = 'https://maven.aliyun.com/repository/gradle-plugin/'
+//
+//    repositories {
+//        maven { url ALIYUN_REPOSITORY }
+//        maven { url ALIYUN_JCENTER }
+//        maven { url ALIYUN_GOOGLE }
+//        maven { url ALIYUN_GRADLE_PLUGIN }
+//        google()
+//        mavenCentral()
+//    }
+}
+
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     id 'com.android.application' version '7.3.1' apply false
     id 'com.android.library' version '7.3.1' apply false
