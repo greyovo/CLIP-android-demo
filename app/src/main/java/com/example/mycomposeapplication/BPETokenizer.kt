@@ -22,7 +22,7 @@ import java.util.zip.GZIPInputStream
 //    }.toMap()
 //}
 
-fun createCharDict(): Map<Int, Char> {
+private fun createCharDict(): Map<Int, Char> {
     val bytesList = mutableListOf<Int>()
     bytesList.addAll(33..126)
     bytesList.addAll(161..172)
@@ -39,7 +39,7 @@ fun createCharDict(): Map<Int, Char> {
     return bytesList.zip(charList.map { it.toChar() }).toMap()
 }
 
-fun readGzipFile(context: Context, assetName: String): List<String> {
+private fun readGzipFile(context: Context, assetName: String): List<String> {
     val filePath = assetFilePath(context, assetName)
     val result = mutableListOf<String>()
     val inputStream = GZIPInputStream(FileInputStream(File(filePath!!)))
@@ -97,7 +97,6 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
             return cache[token]!!
         }
 
-//        val word = (token.dropLast(1) + "${token.last()}</w>")
         var word: MutableList<String> = token.dropLast(1).map { it.toString() }.toMutableList()
         word.add(token.last().toString() + "</w>")
         var pairs: List<Pair<String, String>> = getPairs(word)
@@ -164,31 +163,7 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
             }
         }
         return bpeTokens
-//        return matches.map { match ->
-//            val token = match.toByteArray().toString(Charsets.UTF_8)
-//            bpe(token).split(' ').map { encoder[it]!! }
-//        }.flatten()
     }
-//    fun encode(text: String): List<String> {
-//        val bpeTokens = mutableListOf<String>()
-//        val cleanedText = whitespaceClean(text).lowercase()
-//        val utf8Encoder = Charset.forName("UTF-8").newEncoder()
-//        val matcher = pat.matcher(cleanedText)
-//        val matches = mutableListOf<String>()
-//        while (matcher.find()) {
-//            val match = matcher.group()
-//            matches.add(match)
-//        }
-//        for (token in matches) {
-//            val encodedBytes = byteEncoder[utf8Encoder.encode(token)]
-//            val encodedToken = encodedBytes.array().joinToString("") { byte ->
-//                byteEncoder.encode(byte.toString()).array().joinToString("") { it.toString() }
-//            }
-//            val bpeTokenList = bpe(encodedToken).split(' ')
-//            bpeTokens.addAll(bpeTokenList.map { encoder[it] })
-//        }
-//        return bpeTokens
-//    }
 
     fun decode(tokens: List<Int>): String {
 //        val text = tokens.map { decoder[it]!! }.joinToString("")
@@ -205,12 +180,6 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
         tokens.add(sotToken)
         tokens.addAll(encode(text))
         tokens.add(eotToken)
-
-//    if (DefaultTensorFactory.VERSION < 1.8) {
-//        result = Tensor.zeros(tokens.size, contextLength, java.lang.Long.TYPE)
-//    } else {
-//        result = Tensor.zeros(tokens.size, contextLength, Integer.TYPE)
-//    }
 
         if (tokens.size > contextLength) {
             if (truncate) {
@@ -233,41 +202,13 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
 
 }
 
-fun getPairs(word: List<String>): List<Pair<String, String>> {
+private fun getPairs(word: List<String>): List<Pair<String, String>> {
     return word.zipWithNext().map { it.first to it.second }
 }
 
-fun whitespaceClean(text: String): String {
+private fun whitespaceClean(text: String): String {
     var cleanedText = text.replace(Regex("\\s+"), " ")
     cleanedText = cleanedText.trim()
     return cleanedText
 }
-
-
-//fun tokenize(texts: List<String>, contextLength: Int, truncate: Boolean = true): Tensor {
-//
-//    val tokenizer = BPETokenizer() // get tokenizer
-//    val sotToken = tokenizer.encoder["<|startoftext|>"]!!
-//    val eotToken = tokenizer.encoder["<|endoftext|>"]!!
-//
-//    val allTokens = texts.map { text ->
-//        listOf(sotToken) + tokenizer.encode(text) + eotToken
-//    }
-//
-//    val result = PyTorchAndroid.zeros(allTokens.size, contextLength, torch.int)
-//
-//    allTokens.forEachIndexed { index, tokens ->
-//        if (tokens.size > contextLength) {
-//            if (truncate) {
-//                tokens = tokens.take(contextLength)
-//                tokens[contextLength - 1] = eotToken
-//            } else {
-//                throw RuntimeException("Input $texts[index] is too long for context length $contextLength")
-//            }
-//        }
-//        result[index, 0 until tokens.size] = tokens.toTensor()
-//    }
-//
-//    return result
-//}
 
