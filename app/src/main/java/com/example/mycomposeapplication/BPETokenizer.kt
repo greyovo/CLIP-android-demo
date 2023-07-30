@@ -56,7 +56,7 @@ fun readGzipFile(context: Context, assetName: String): List<String> {
     return result
 }
 
-class BPETokenizer(context: Context, bpePath: String = "vocab.gz") {
+class BPETokenizer(context: Context, bpePath: String = "vocab") {
 
     private val byteEncoder = createCharDict()
     private val byteDecoder = byteEncoder.map { it.value to it.key }.toMap()
@@ -102,6 +102,7 @@ class BPETokenizer(context: Context, bpePath: String = "vocab.gz") {
 
 //        val word = (token.dropLast(1) + "${token.last()}</w>")
         var word: MutableList<String> = token.dropLast(1).map { it.toString() }.toMutableList()
+        word.add(token.last().toString() + "</w>")
         var pairs: List<Pair<String, String>> = getPairs(word)
 
         if (pairs.isEmpty()) {
@@ -236,8 +237,9 @@ class BPETokenizer(context: Context, bpePath: String = "vocab.gz") {
 
 }
 
-fun getPairs(word: List<String>): List<Pair<String, String>> =
-    word.zipWithNext().map { it.first to it.second }
+fun getPairs(word: List<String>): List<Pair<String, String>> {
+    return word.zipWithNext().map { it.first to it.second }
+}
 
 fun whitespaceClean(text: String): String {
     var cleanedText = text.replace(Regex("\\s+"), " ")
