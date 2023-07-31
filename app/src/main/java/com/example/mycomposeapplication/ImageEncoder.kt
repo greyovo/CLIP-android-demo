@@ -1,18 +1,15 @@
 package com.example.mycomposeapplication
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.os.Environment
 import android.util.Log
 import org.pytorch.*
 import org.pytorch.torchvision.TensorImageUtils
 import java.io.File
 import java.io.FileOutputStream
-import java.util.*
 
 
-class ImageEncoder(private val context: Context) {
+class ImageEncoder(private val context: MainActivity) {
     private val modelPath = "clip-image-encoder.ptl"
 
     //    private val modelPath = "clip-image-encoder-quantized.ptl"
@@ -23,8 +20,6 @@ class ImageEncoder(private val context: Context) {
     }
 
     private fun loadModel() {
-        // loading serialized torchscript module from packaged into app android asset model.pt,
-        // app/src/model/assets/model.pt
         val time = System.currentTimeMillis()
         module = LiteModuleLoader.load(assetFilePath(context, modelPath))
         val dur = (System.currentTimeMillis() - time) * 1000
@@ -72,26 +67,10 @@ class ImageEncoder(private val context: Context) {
             0,
             MemoryFormat.CHANNELS_LAST,
         )
-        val mInputTensor = Tensor.fromBlob(
+        return Tensor.fromBlob(
             mInputTensorBuffer, longArrayOf(1, 3, 224, 224),
             MemoryFormat.CHANNELS_LAST,
         )
-        return mInputTensor
-//        floatArrayOf(0.485f, 0.456f, 0.406f)
-//        floatArrayOf(0.229f, 0.224f, 0.225f)
-//        (0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)
-    }
-
-
-    // Compose([
-    //    Resize(n_px, interpolation=InterpolationMode.BICUBIC),
-    //    CenterCrop(n_px),
-    //    _convert_image_to_rgb,
-    //    ToTensor(),
-    //    Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
-    // ])
-    private fun preprocessImage() {
-
     }
 
     fun encode(input: Bitmap): Tensor? {
@@ -99,16 +78,16 @@ class ImageEncoder(private val context: Context) {
             loadModel()
         }
         val resized = resize(input)
-        saveBitMap(resized, "resized")
+//        saveBitMap(resized, "resized")
         val cropped = centerCrop(resized)
-        saveBitMap(cropped, "cropped")
+//        saveBitMap(cropped, "cropped")
         val tensor = toTensor(toRGB(cropped))
         tensor.dtype()
 
-        Log.i(
-            "ImageEncoder.tensor",
-            tensor.dataAsFloatArray[tensor.dataAsFloatArray.size - 1].toString()
-        )
+//        Log.i(
+//            "ImageEncoder.tensor",
+//            tensor.dataAsFloatArray[tensor.dataAsFloatArray.size - 1].toString()
+//        )
         return module?.forward(IValue.from(tensor))?.toTensor()
     }
 
