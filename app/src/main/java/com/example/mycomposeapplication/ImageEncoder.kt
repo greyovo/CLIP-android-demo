@@ -12,7 +12,6 @@ import java.io.FileOutputStream
 class ImageEncoder(private val context: MainActivity) {
     private val modelPath = "clip-image-encoder.ptl"
 
-    //    private val modelPath = "clip-image-encoder-quantized.ptl"
     private var module: Module? = null
 
     init {
@@ -77,18 +76,27 @@ class ImageEncoder(private val context: MainActivity) {
         if (module == null) {
             loadModel()
         }
+        var start = System.currentTimeMillis()
         val resized = resize(input)
+        Log.d("resize cost:", "${System.currentTimeMillis() - start} ms")
 //        saveBitMap(resized, "resized")
+        start = System.currentTimeMillis()
         val cropped = centerCrop(resized)
+        saveBitMap(cropped, "cropped")
+        Log.d("crop cost:", "${System.currentTimeMillis() - start} ms")
 //        saveBitMap(cropped, "cropped")
+        start = System.currentTimeMillis()
         val tensor = toTensor(toRGB(cropped))
-        tensor.dtype()
+        Log.d("toTensor cost:", "${System.currentTimeMillis() - start} ms")
 
 //        Log.i(
 //            "ImageEncoder.tensor",
 //            tensor.dataAsFloatArray[tensor.dataAsFloatArray.size - 1].toString()
 //        )
-        return module?.forward(IValue.from(tensor))?.toTensor()
+        start = System.currentTimeMillis()
+        val res = module?.forward(IValue.from(tensor))?.toTensor()
+        Log.d("forward cost:", "${System.currentTimeMillis() - start} ms")
+        return res
     }
 
     private fun saveBitMap(bitmap: Bitmap, name: String) {
