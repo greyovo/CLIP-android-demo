@@ -5,7 +5,7 @@ import android.util.Log
 import org.pytorch.*
 
 class TextEncoder(private val context: Context) {
-    private val modelPath = "clip-text-encoder.ptl"
+    private val modelPath = "tiny-clip-text-encoder.ptl"
     private var module: Module? = null
 
     init {

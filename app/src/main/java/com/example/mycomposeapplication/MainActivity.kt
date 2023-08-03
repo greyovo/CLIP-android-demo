@@ -93,7 +93,7 @@ class MainActivity : ComponentActivity() {
 //        Log.d("testTextEncoder", Arrays.toString(output?.dataAsFloatArray))
     }
 
-    private val imageName = "image-1000px.jpg"
+    private val imageName = "image-5000px.jpg"
 
     private fun testImageEncoder() {
         if (imageEncoder == null) {
@@ -126,7 +126,7 @@ class MainActivity : ComponentActivity() {
     private var batchTestLock = false
 
     /**
-     * With SnapDragon 8 gen 2 SoC:
+     * With SnapDragon 8+ gen 1 SoC:
      * - Encoding 100 images for ~11s
      * - Encoding 2000 images for ~25s
      */
@@ -144,7 +144,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.Main) {
             // 1...
             withContext(Dispatchers.Default) {
-                val total = 100
+                val total = 1000
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
                     val bitmap =

@@ -10,7 +10,8 @@ import java.io.FileOutputStream
 
 
 class ImageEncoder(private val context: MainActivity) {
-    private val modelPath = "clip-image-encoder.ptl"
+    private val modelPath = "tiny-clip-image-encoder.ptl"
+//    private val modelPath = "clip-image-quant-cpu.pt"
 
     private var module: Module? = null
 
@@ -25,8 +26,17 @@ class ImageEncoder(private val context: MainActivity) {
         Log.i("ImageEncoder", "load cost: $dur s")
     }
 
+    /**
+     * 缩放为短边为224像素
+     */
     private fun resize(bitmap: Bitmap): Bitmap {
-        return Bitmap.createScaledBitmap(bitmap, 224, 224, false)
+        return if (bitmap.width < bitmap.height) {
+            val longHeight = bitmap.height * 224 / bitmap.width
+            Bitmap.createScaledBitmap(bitmap, 224, longHeight, false)
+        } else {
+            val longWidth = bitmap.width * 224 / bitmap.height
+            Bitmap.createScaledBitmap(bitmap, longWidth, 224, false)
+        }
     }
 
     private fun centerCrop(bitmap: Bitmap): Bitmap {
@@ -82,11 +92,11 @@ class ImageEncoder(private val context: MainActivity) {
 //        saveBitMap(resized, "resized")
         start = System.currentTimeMillis()
         val cropped = centerCrop(resized)
-        saveBitMap(cropped, "cropped")
         Log.d("crop cost:", "${System.currentTimeMillis() - start} ms")
+        saveBitMap(cropped, "cropped")
 //        saveBitMap(cropped, "cropped")
         start = System.currentTimeMillis()
-        val tensor = toTensor(toRGB(cropped))
+        val tensor = toTensor((cropped))
         Log.d("toTensor cost:", "${System.currentTimeMillis() - start} ms")
 
 //        Log.i(
