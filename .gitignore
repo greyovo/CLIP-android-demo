@@ -16,3 +16,6 @@
 local.properties
 *.ptl
 *.pt
+*.onnx
+*.apk
+output-metadata.json

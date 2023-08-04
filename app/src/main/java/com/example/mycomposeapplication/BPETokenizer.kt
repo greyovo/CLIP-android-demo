@@ -172,7 +172,11 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
     }
 
 
-    fun tokenize(text: String, contextLength: Int = 77, truncate: Boolean = false): Tensor {
+    fun tokenize(
+        text: String,
+        contextLength: Int = 77,
+        truncate: Boolean = false
+    ): Pair<IntArray, LongArray> {
         val sotToken: Int = encoder["<|startoftext|>"]!!
         val eotToken: Int = encoder["<|endoftext|>"]!!
 //    val allTokens: MutableList<MutableList<Int>> = ArrayList()
@@ -189,15 +193,15 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
                 throw java.lang.RuntimeException("Input $text is too long for context length $contextLength")
             }
         }
-        val a = IntArray(contextLength) {
+        val result = IntArray(contextLength) {
             if (it < tokens.size)
                 tokens[it]
             else 0
         }
         val shape = longArrayOf(1, contextLength.toLong())
-        val result: Tensor = Tensor.fromBlob(a, shape)
+//        val result: Tensor = Tensor.fromBlob(result, shape)
 
-        return result
+        return Pair(result, shape)
     }
 
 }

@@ -69,4 +69,6 @@ dependencies {
 //    implementation 'org.pytorch:pytorch_android_torchvision:1.10.0'
     implementation 'org.pytorch:pytorch_android_torchvision_lite:1.13.0'
     implementation 'com.google.code.gson:gson:2.8.8'
+
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:latest.release'
 }
