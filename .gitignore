@@ -19,3 +19,4 @@ local.properties
 *.onnx
 *.apk
 output-metadata.json
+*.ort

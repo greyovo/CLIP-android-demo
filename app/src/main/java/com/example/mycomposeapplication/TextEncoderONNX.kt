@@ -51,7 +51,6 @@ class TextEncoderONNX(private val context: Context) {
                 }
             }
         }
-
     }
 
     private fun intArrayToIntBuffer() {

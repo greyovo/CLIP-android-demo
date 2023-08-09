@@ -3,10 +3,8 @@ package com.example.mycomposeapplication
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
-import ai.onnxruntime.providers.NNAPIFlags
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.os.SystemClock
 import android.util.Log
 import org.pytorch.*
 import org.pytorch.torchvision.TensorImageUtils
@@ -16,8 +14,15 @@ import java.util.*
 
 
 class ImageEncoderONNX(private val context: MainActivity) {
-    //    private val modelPath = "tiny-clip-image-encoder.ptl"
-    private val modelPath = "clip-image-encoder-fp16.onnx"
+    companion object {
+        val normMeanRGB = floatArrayOf(0.48145467f, 0.4578275f, 0.40821072f)
+        val normStdRGB = floatArrayOf(0.26862955f, 0.2613026f, 0.2757771f)
+    }
+
+    //    private val modelPath = "clip-image-encoder.opset15.onnx"
+//    private val modelPath = "clip-image-encoder.ort"
+//    private val modelPath = "clip-image-encoder.onnx"
+    private val modelPath = "clip-image-encoder-quant-int8.onnx"
 
     //    private val modelPath = "clip-image-quant-cpu.pt"
     private var ortEnv: OrtEnvironment? = null
@@ -27,30 +32,24 @@ class ImageEncoderONNX(private val context: MainActivity) {
 
     init {
         ortEnv = OrtEnvironment.getEnvironment()
-        ortSession = createOrtSession()
-    }
-
-    private fun readModel(): ByteArray {
-        return context.assets.open(modelPath).readBytes()
-    }
-
-    // Create a new ORT session in background
-    private fun createOrtSession(): OrtSession? {
         val options = OrtSession.SessionOptions()
-        options.addNnapi(EnumSet.of(NNAPIFlags.USE_FP16))
-        return ortEnv?.createSession(assetFilePath(context, modelPath), options)
+//        options.addConfigEntry("session.load_model_format", "ORT")
+//        options.addNnapi(
+////            EnumSet.of(NNAPIFlags.CPU_DISABLED)
+//        )
+        ortSession = ortEnv?.createSession(assetFilePath(context, modelPath), options)
     }
 
     /**
      * 缩放为短边为224像素
      */
     private fun resize(bitmap: Bitmap): Bitmap {
-        return if (bitmap.width < bitmap.height) {
+        if (bitmap.width < bitmap.height) {
             val longHeight = bitmap.height * 224 / bitmap.width
-            Bitmap.createScaledBitmap(bitmap, 224, longHeight, false)
+            return Bitmap.createScaledBitmap(bitmap, 224, longHeight, false)
         } else {
             val longWidth = bitmap.width * 224 / bitmap.height
-            Bitmap.createScaledBitmap(bitmap, longWidth, 224, false)
+            return Bitmap.createScaledBitmap(bitmap, longWidth, 224, false)
         }
     }
 
@@ -87,9 +86,21 @@ class ImageEncoderONNX(private val context: MainActivity) {
     }
 
     fun encode(bitmap: Bitmap): Array<FloatArray> {
+        val imgData = preprocess(bitmap)
         val start = System.currentTimeMillis()
-        val imgData = bitmapToFloatBuffer(preprocess(bitmap))
+        val floatBuffer = Tensor.allocateFloatBuffer(3 * 224 * 224)
+        TensorImageUtils.bitmapToFloatBuffer(
+            imgData,
+            0, 0,
+            224, 224,
+            normMeanRGB,
+            normStdRGB,
+            floatBuffer,
+            0,
+            MemoryFormat.CHANNELS_LAST,
+        )
         Log.d("bitmapToBuffer", "${System.currentTimeMillis() - start} ms")
+
 //        val imgDataShort = floatBufferToFloat16Buffer(imgData)
 //        Log.d("ONNX imgData size", imgData.limit().toString())
 //        Log.d("ONNX imgDataShort size", imgDataShort.limit().toString())
@@ -97,16 +108,15 @@ class ImageEncoderONNX(private val context: MainActivity) {
         val shape: LongArray = longArrayOf(1, 3, 224, 224)
         val env = OrtEnvironment.getEnvironment()
         env.use {
-            val tensor = OnnxTensor.createTensor(env, imgData, shape)
+            val tensor = OnnxTensor.createTensor(env, floatBuffer, shape)
             tensor.use {
-                val start = System.currentTimeMillis()
+                val start2 = System.currentTimeMillis()
                 val output: OrtSession.Result? =
                     ortSession?.run(Collections.singletonMap(inputName, tensor))
-                Log.d("ONNX cost", "${System.currentTimeMillis() - start} ms")
+                Log.d("ONNX cost", "${System.currentTimeMillis() - start2} ms")
                 output.use {
                     @Suppress("UNCHECKED_CAST")
-                    val rawOutput = (output?.get(0)?.value) as Array<FloatArray>
-                    return rawOutput
+                    return (output?.get(0)?.value) as Array<FloatArray>
                 }
             }
         }
@@ -129,4 +139,6 @@ class ImageEncoderONNX(private val context: MainActivity) {
             e.printStackTrace()
         }
     }
+
+
 }
