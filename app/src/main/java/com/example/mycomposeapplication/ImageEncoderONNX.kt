@@ -21,25 +21,14 @@ class ImageEncoderONNX(private val context: MainActivity) {
         val normStdRGB = floatArrayOf(0.26862955f, 0.2613026f, 0.2757771f)
     }
 
-    //    private val modelPath = "clip-image-encoder.opset15.onnx"
-//    private val modelPath = "clip-image-encoder.ort"
-//    private val modelPath = "clip-image-encoder.onnx"
     private val modelPath = "clip-image-encoder-quant-int8.onnx"
 
-    //    private val modelPath = "clip-image-quant-cpu.pt"
     private var ortEnv: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
 
-//    private var module: Module? = null
-
     init {
         ortEnv = OrtEnvironment.getEnvironment()
-        val options = OrtSession.SessionOptions()
-//        options.addConfigEntry("session.load_model_format", "ORT")
-//        options.addNnapi(
-//            EnumSet.of(NNAPIFlags.USE_NCHW)
-//        )
-        ortSession = ortEnv?.createSession(assetFilePath(context, modelPath), options)
+        ortSession = ortEnv?.createSession(assetFilePath(context, modelPath))
     }
 
     /**
@@ -108,9 +97,6 @@ class ImageEncoderONNX(private val context: MainActivity) {
         )
         Log.d("bitmapToBuffer", "${System.currentTimeMillis() - start} ms")
 
-//        val imgDataShort = floatBufferToFloat16Buffer(imgData)
-//        Log.d("ONNX imgData size", imgData.limit().toString())
-//        Log.d("ONNX imgDataShort size", imgDataShort.limit().toString())
         val inputName = ortSession?.inputNames?.iterator()?.next()
         val shape: LongArray = longArrayOf(1, 3, 224, 224)
         val env = OrtEnvironment.getEnvironment()

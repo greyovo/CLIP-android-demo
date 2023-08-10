@@ -14,7 +14,7 @@ import java.nio.IntBuffer
 import java.util.*
 
 class TextEncoderONNX(private val context: Context) {
-    private val modelPath = "clip-text-encoder-fp16.onnx"
+    private val modelPath = "clip-text-encoder-quant-int8.onnx"
 
     private var ortEnv: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
@@ -23,10 +23,6 @@ class TextEncoderONNX(private val context: Context) {
     init {
         ortEnv = OrtEnvironment.getEnvironment()
         ortSession = createOrtSession()
-    }
-
-    private fun readModel(): ByteArray {
-        return context.assets.open(modelPath).readBytes()
     }
 
     // Create a new ORT session in background
@@ -52,10 +48,5 @@ class TextEncoderONNX(private val context: Context) {
             }
         }
     }
-
-    private fun intArrayToIntBuffer() {
-
-    }
-
 
 }

@@ -19,21 +19,25 @@ import com.example.mycomposeapplication.ui.theme.MyComposeApplicationTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.pytorch.Tensor
 import java.io.File
 import java.util.*
 import kotlin.concurrent.thread
 
 private val imageList =
-    listOf("image@400px.jpg", "image@1000px.jpg", "image@4000px.jpg", "image@4000px-large.jpg")
+    listOf(
+        "image@400px.jpg",
+        "image@1000px.jpg",
+        "image@4000px.jpg",
+        "image@4000px-large.jpg",
+        "image-large-17.2MB.jpg"
+    )
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        imagePath = assetFilePath(this, selectedImage.value).toString()
         setContent {
-            MyComposeApplicationTheme {
+            MyComposeApplicationTheme() {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier
@@ -71,14 +75,6 @@ class MainActivity : ComponentActivity() {
                         }
                         Text(text = "testImageEncoder: ${encodeImageCost.value} ms")
 
-                        Button(onClick = { testBatchEncodeImage() }) {
-                            Text(text = "encode batch images")
-                        }
-
-                        Button(onClick = { testMultiThread() }) {
-                            Text(text = "encode batch images in MultiThread")
-                        }
-
                         Button(onClick = { testBatchONNX() }) {
                             Text(text = "testBatchONNX")
                         }
@@ -92,6 +88,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        imagePath = assetFilePath(this, selectedImage.value)
     }
 
     var imageListExpanded = mutableStateOf(false)
@@ -102,30 +99,20 @@ class MainActivity : ComponentActivity() {
     private var encodeImageState1: MutableState<String> = mutableStateOf("None")
     private var encodeImageState2: MutableState<String> = mutableStateOf("None")
 
-
-    private var tokenizer: BPETokenizer? = null
-    private var textEncoder: TextEncoder? = null
-    private var imageEncoder: ImageEncoder? = null
     private var textEncoderONNX: TextEncoderONNX? = null
     private var imageEncoderONNX: ImageEncoderONNX? = null
 
     private var imagePath: String = ""
 
     private fun testTextEncoder() {
-        if (textEncoder == null) {
-            textEncoder = TextEncoder(this)
-        }
-        if (tokenizer == null) {
-            tokenizer = BPETokenizer(this)
+        if (textEncoderONNX == null) {
+            loadTextEncoderONNX()
         }
         val text = "A bird flying in the sky, cloudy"
         Log.i("testTextEncoder", "start...")
         val time = System.currentTimeMillis()
-        val input = tokenizer!!.tokenize(text)
-        val output = textEncoder?.encode(Tensor.fromBlob(input.first, input.second))
+        textEncoderONNX?.encode(text)
         encodeTextCost.value = System.currentTimeMillis() - time
-//        Log.i("testTextEncoder", "encode cost: ${(System.currentTimeMillis() - time)}")
-//        Log.d("testTextEncoder", Arrays.toString(output?.dataAsFloatArray))
     }
 
     private fun testImageEncoder() {
@@ -139,28 +126,12 @@ class MainActivity : ComponentActivity() {
             // 70ms for loading 4096px, 4.7MB JPEG
 //            val bitmap = decodeSampledBitmapFromFile(imagePath, 224, 224)
             // 64ms for loading 4096px, 4.7MB JPEG
-            val bitmap = withContext(Dispatchers.IO) {
-                loadThumbnail(this@MainActivity, imagePath)
-            }
+            val bitmap = loadThumbnail(this@MainActivity, imagePath)
             Log.d("loadImage", "${System.currentTimeMillis() - time} ms")
             saveBitMap(this@MainActivity, bitmap, "decodeSampledBitmapFromFile")
             val output = imageEncoderONNX?.encode(bitmap)
             encodeImageCost.value = System.currentTimeMillis() - time
             Log.d("testImageEncoder", Arrays.toString(output))
-        }
-    }
-
-    private fun loadImageEncoder() {
-        lifecycleScope.launch(Dispatchers.Main) {
-            withContext(Dispatchers.Default) {
-                if (imageEncoder == null) {
-                    encodeImageState1.value = "Loading ImageEncoder ..."
-                    encodeImageState2.value = "Loading ImageEncoder ..."
-                    imageEncoder = ImageEncoder(context = this@MainActivity)
-                    encodeImageState1.value = "Loading ImageEncoder done"
-                    encodeImageState2.value = "Loading ImageEncoder done"
-                }
-            }
         }
     }
 
@@ -177,7 +148,7 @@ class MainActivity : ComponentActivity() {
     private fun loadTextEncoderONNX() {
         lifecycleScope.launch(Dispatchers.Main) {
             withContext(Dispatchers.Default) {
-                if (imageEncoder == null) {
+                if (textEncoderONNX == null) {
                     textEncoderONNX = TextEncoderONNX(context = this@MainActivity)
                 }
             }
@@ -197,37 +168,6 @@ class MainActivity : ComponentActivity() {
      * Decoding stream costs more time than model inference time
      * if the image is large.
      */
-    private fun testBatchEncodeImage() {
-        assetFilePath(this, selectedImage.value)
-        if (imageEncoder == null) {
-            loadImageEncoder()
-            return
-        }
-        if (batchTestLock) {
-            Toast.makeText(this, "Already Running batch test!", Toast.LENGTH_SHORT).show()
-            return
-        }
-        batchTestLock = true
-        lifecycleScope.launch(Dispatchers.Main) {
-            withContext(Dispatchers.Default) {
-                val total = 500
-                val start = System.currentTimeMillis()
-                for (i in 0..total) {
-//                    val bitmap = BitmapFactory.decodeStream(assets.open(selectedImage.value))
-                    val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
-                    imageEncoder?.encode(bitmap)
-                    if (i % 10 == 0) {
-                        encodeImageState1.value = "Processing `${selectedImage.value}`: $i / $total"
-                    }
-                }
-                encodeImageState1.value =
-                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
-                batchTestLock = false
-            }
-        }
-    }
-
     private fun testBatchONNX() {
         if (batchTestLock) {
             Toast.makeText(this, "Already Running batch test!", Toast.LENGTH_SHORT).show()
@@ -242,17 +182,8 @@ class MainActivity : ComponentActivity() {
                 val total = 500
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
-//                    val bitmap = BitmapFactory.decodeStream(assets.open(selectedImage.value))
                     val _start = System.currentTimeMillis()
-//                    val bitmap = loadThumbnail(this@MainActivity, imagePath)
-                    val bitmap = withContext(Dispatchers.IO) {
-                        loadThumbnail(this@MainActivity, imagePath)
-                    }
-//                    val bitmap = decodeSampledBitmapFromFile(
-//                        filesDir.path + "/" + selectedImage.value,
-//                        reqHeight = 224,
-//                        reqWidth = 224
-//                    )
+                    val bitmap = loadThumbnail(this@MainActivity, imagePath)
                     Log.d("decodeStream", "${System.currentTimeMillis() - _start} ms")
                     saveBitMap(this@MainActivity, bitmap, "temp-224.jpg")
                     imageEncoderONNX?.encode(bitmap)
@@ -268,6 +199,10 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+
+    var encodeLock1 = false
+    var encodeLock2 = false
+
     private fun testMultiThreadONNX() {
         assetFilePath(this, selectedImage.value)
         if (imageEncoderONNX == null) {
@@ -280,71 +215,23 @@ class MainActivity : ComponentActivity() {
         } else {
             encodeLock1 = true
             thread(start = true, isDaemon = false, name = "DThread1", priority = 1) {
-                val total = 500
-                val start = System.currentTimeMillis()
-                for (i in 0..total) {
-                    val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
-                    imageEncoderONNX?.encode(bitmap)
-                    if (i % 10 == 0) {
-                        encodeImageState1.value = "Processing `${selectedImage.value}`: $i / $total"
+                suspend {
+                    val total = 500
+                    val start = System.currentTimeMillis()
+                    for (i in 0..total) {
+                        val bitmap =
+                            BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
+                        imageEncoderONNX?.encode(bitmap)
+                        if (i % 10 == 0) {
+                            encodeImageState1.value =
+                                "Processing `${selectedImage.value}`: $i / $total"
+                        }
                     }
+                    encodeImageState1.value =
+                        "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
+                    encodeLock1 = false
                 }
-                encodeImageState1.value =
-                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
-                encodeLock1 = false
-            }
-        }
-        if (encodeLock2) {
-            Toast.makeText(this, "Already Running batch test!", Toast.LENGTH_SHORT).show()
-            return
-        } else {
-            encodeLock2 = true
-            thread(start = true, isDaemon = false, name = "DThread2", priority = 1) {
-                val total = 500
-                val start = System.currentTimeMillis()
-                for (i in 0..total) {
-                    val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
-                    imageEncoderONNX?.encode(bitmap)
-                    if (i % 10 == 0) {
-                        encodeImageState2.value = "Processing `${selectedImage.value}`: $i / $total"
-                    }
-                }
-                encodeImageState2.value =
-                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
-            }
-            encodeLock2 = false
-        }
-    }
 
-    var encodeLock1 = false
-    var encodeLock2 = false
-    private fun testMultiThread() {
-        assetFilePath(this, selectedImage.value)
-        if (imageEncoder == null) {
-            loadImageEncoder()
-            return
-        }
-        if (encodeLock1) {
-            Toast.makeText(this, "Already Running batch test!", Toast.LENGTH_SHORT).show()
-            return
-        } else {
-            encodeLock1 = true
-            thread(start = true, isDaemon = false, name = "DThread1", priority = 1) {
-                val total = 500
-                val start = System.currentTimeMillis()
-                for (i in 0..total) {
-                    val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
-                    imageEncoder?.encode(bitmap)
-                    if (i % 10 == 0) {
-                        encodeImageState1.value = "Processing `${selectedImage.value}`: $i / $total"
-                    }
-                }
-                encodeImageState1.value =
-                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
-                encodeLock1 = false
             }
         }
         if (encodeLock2) {
@@ -353,27 +240,33 @@ class MainActivity : ComponentActivity() {
         } else {
             encodeLock2 = true
             thread(start = true, isDaemon = false, name = "DThread2", priority = 1) {
-                val total = 500
-                val start = System.currentTimeMillis()
-                for (i in 0..total) {
-                    val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
-                    imageEncoder?.encode(bitmap)
-                    if (i % 10 == 0) {
-                        encodeImageState2.value = "Processing `${selectedImage.value}`: $i / $total"
+                suspend {
+                    val total = 500
+                    val start = System.currentTimeMillis()
+                    for (i in 0..total) {
+                        val bitmap = loadThumbnail(this, imagePath)
+                        imageEncoderONNX?.encode(bitmap)
+                        if (i % 10 == 0) {
+                            encodeImageState2.value =
+                                "Processing `${selectedImage.value}`: $i / $total"
+                        }
                     }
+                    encodeImageState2.value =
+                        "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
+                    encodeLock2 = false
                 }
-                encodeImageState2.value =
-                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
             }
-            encodeLock2 = false
+
         }
     }
 
     private fun setImage(im: String) {
         imageListExpanded.value = false
         selectedImage.value = im
-        imagePath = assetFilePath(this@MainActivity, selectedImage.value).toString()
+        imagePath = assetFilePath(this@MainActivity, selectedImage.value)
+        if (imagePath.isEmpty()) {
+            Toast.makeText(this, "图片加载失败！", Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
