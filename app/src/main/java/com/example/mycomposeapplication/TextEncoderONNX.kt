@@ -7,6 +7,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.util.Log
+import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.pytorch.*
@@ -25,15 +26,20 @@ class TextEncoderONNX(private val context: Context) {
         ortSession = createOrtSession()
     }
 
-    // Create a new ORT session in background
     private fun createOrtSession(): OrtSession? {
-        return ortEnv?.createSession(assetFilePath(context, modelPath))
+        val p = assetFilePath(context, modelPath) ?: return null
+        return ortEnv?.createSession(p)
     }
 
-    fun encode(input: String): Array<FloatArray> {
-        val token = tokenizer!!.tokenize(input)
-        val buffer = IntBuffer.wrap(token.first)
-        val shape = token.second
+    fun encode(input: String): Array<FloatArray>? {
+        if (tokenizer == null || ortSession == null) {
+            Toast.makeText(context, "TextEncoderONNX init failed!", Toast.LENGTH_SHORT).show()
+            return null
+        }
+
+        val token = tokenizer?.tokenize(input)
+        val buffer = IntBuffer.wrap(token?.first)
+        val shape = token?.second
         val inputName = ortSession?.inputNames?.iterator()?.next()
 
         val env = OrtEnvironment.getEnvironment()

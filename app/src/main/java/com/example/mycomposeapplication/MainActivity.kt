@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        imagePath = assetFilePath(this, selectedImage.value)
+        imagePath = assetFilePath(this, selectedImage.value).toString()
     }
 
     var imageListExpanded = mutableStateOf(false)
@@ -263,7 +263,7 @@ class MainActivity : ComponentActivity() {
     private fun setImage(im: String) {
         imageListExpanded.value = false
         selectedImage.value = im
-        imagePath = assetFilePath(this@MainActivity, selectedImage.value)
+        imagePath = assetFilePath(this@MainActivity, selectedImage.value).toString()
         if (imagePath.isEmpty()) {
             Toast.makeText(this, "图片加载失败！", Toast.LENGTH_SHORT).show()
         }
@@ -272,7 +272,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun Greeting(name: String) {
-    Text(text = "Testing: $name!")
+    Text(text = "Selected image: $name")
 }
 
 @Preview(showBackground = true)

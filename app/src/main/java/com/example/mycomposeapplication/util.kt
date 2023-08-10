@@ -5,7 +5,9 @@ import android.graphics.*
 import android.media.Image
 import android.media.Image.Plane
 import android.media.ImageReader
+import android.os.Looper
 import android.util.Log
+import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
@@ -20,7 +22,7 @@ import java.nio.ByteBuffer
 import java.nio.FloatBuffer
 
 @Throws(IOException::class)
-fun assetFilePath(context: Context, assetName: String): String {
+fun assetFilePath(context: Context, assetName: String): String? {
     val file = File(context.filesDir, assetName)
     if (file.exists() && file.length() > 0) {
         return file.absolutePath
@@ -38,7 +40,9 @@ fun assetFilePath(context: Context, assetName: String): String {
             return file.absolutePath
         }
     } catch (_: Exception) {
-        return ""
+        Looper.prepare()
+        Toast.makeText(context, "Load asset failed: $assetName", Toast.LENGTH_SHORT).show()
+        return null
     }
 
 }

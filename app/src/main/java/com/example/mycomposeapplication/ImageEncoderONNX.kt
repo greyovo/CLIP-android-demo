@@ -7,6 +7,7 @@ import ai.onnxruntime.providers.NNAPIFlags
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Log
+import android.widget.Toast
 import org.pytorch.*
 import org.pytorch.torchvision.TensorImageUtils
 import java.io.File
@@ -28,7 +29,12 @@ class ImageEncoderONNX(private val context: MainActivity) {
 
     init {
         ortEnv = OrtEnvironment.getEnvironment()
-        ortSession = ortEnv?.createSession(assetFilePath(context, modelPath))
+        ortSession = createOrtSession()
+    }
+
+    private fun createOrtSession(): OrtSession? {
+        val p = assetFilePath(context, modelPath) ?: return null
+        return ortEnv?.createSession(p)
     }
 
     /**
@@ -81,7 +87,12 @@ class ImageEncoderONNX(private val context: MainActivity) {
         return res
     }
 
-    fun encode(bitmap: Bitmap): Array<FloatArray> {
+    fun encode(bitmap: Bitmap): Array<FloatArray>? {
+        if ( ortSession == null) {
+            Toast.makeText(context, "ImageEncoderONNX init failed!", Toast.LENGTH_SHORT).show()
+            return null
+        }
+
         val imgData = preprocess(bitmap)
         val start = System.currentTimeMillis()
         val floatBuffer = Tensor.allocateFloatBuffer(3 * 224 * 224)
