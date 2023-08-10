@@ -65,7 +65,7 @@ Encode 500 pics in single thread:
 
 
 
-## Credit
+## Acknowledgement
 
 - [openai/CLIP](https://github.com/openai/CLIP)
 - [ONNX Runtime](https://onnxruntime.ai/)
