@@ -3,6 +3,7 @@ package com.example.mycomposeapplication
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import ai.onnxruntime.providers.NNAPIFlags
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Log
@@ -11,6 +12,7 @@ import org.pytorch.torchvision.TensorImageUtils
 import java.io.File
 import java.io.FileOutputStream
 import java.util.*
+import kotlin.math.max
 
 
 class ImageEncoderONNX(private val context: MainActivity) {
@@ -35,13 +37,14 @@ class ImageEncoderONNX(private val context: MainActivity) {
         val options = OrtSession.SessionOptions()
 //        options.addConfigEntry("session.load_model_format", "ORT")
 //        options.addNnapi(
-////            EnumSet.of(NNAPIFlags.CPU_DISABLED)
+//            EnumSet.of(NNAPIFlags.USE_NCHW)
 //        )
         ortSession = ortEnv?.createSession(assetFilePath(context, modelPath), options)
     }
 
     /**
-     * 缩放为短边为224像素
+     * 缩放为短边为224像素；
+     * 长的缩短，短的拉长。
      */
     private fun resize(bitmap: Bitmap): Bitmap {
         if (bitmap.width < bitmap.height) {
@@ -80,6 +83,10 @@ class ImageEncoderONNX(private val context: MainActivity) {
 
     private fun preprocess(bitmap: Bitmap): Bitmap {
         val start = System.currentTimeMillis()
+        if (bitmap.width == 224 && bitmap.height == 224) {
+            Log.d("preprocess", "w=h=224, no preprocess.")
+            return bitmap
+        }
         val res = centerCrop(resize(bitmap))
         Log.d("preprocess", "${System.currentTimeMillis() - start} ms")
         return res
@@ -119,24 +126,6 @@ class ImageEncoderONNX(private val context: MainActivity) {
                     return (output?.get(0)?.value) as Array<FloatArray>
                 }
             }
-        }
-    }
-
-    private fun saveBitMap(bitmap: Bitmap, name: String) {
-        try {
-            val file = File(context.filesDir.path + "/$name.png")
-            if (!file.exists()) {
-                file.createNewFile()
-            }
-            val out = FileOutputStream(file)
-
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-
-            // 刷新输出流并关闭
-            out.flush()
-            out.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 

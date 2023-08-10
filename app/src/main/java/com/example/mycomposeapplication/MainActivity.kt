@@ -1,9 +1,5 @@
 package com.example.mycomposeapplication
 
-import ai.onnxruntime.OrtSession
-import android.app.Dialog
-import android.app.FragmentManager
-import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
@@ -13,28 +9,29 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Button
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Surface
-import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.lifecycleScope
 import com.example.mycomposeapplication.ui.theme.MyComposeApplicationTheme
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.pytorch.Tensor
 import java.io.File
 import java.util.*
 import kotlin.concurrent.thread
 
+private val imageList =
+    listOf("image@400px.jpg", "image@1000px.jpg", "image@4000px.jpg", "image@4000px-large.jpg")
+
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        imagePath = assetFilePath(this, selectedImage.value).toString()
         setContent {
             MyComposeApplicationTheme {
                 // A surface container using the 'background' color from the theme
@@ -45,10 +42,23 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colors.background
                 ) {
                     Column {
-                        Greeting("Android")
-                        Button(onClick = { testTokenizer() }) {
-                            Text(text = "testTokenizer")
+                        Greeting(selectedImage.value)
+                        OutlinedButton(onClick = { imageListExpanded.value = true }) {
+                            Text(text = "selectImage")
+                            DropdownMenu(
+                                expanded = imageListExpanded.value,
+                                onDismissRequest = { imageListExpanded.value = false }
+                            ) {
+                                for (im in imageList) {
+                                    DropdownMenuItem(onClick = {
+                                        setImage(im)
+                                    }) {
+                                        Text(im)
+                                    }
+                                }
+                            }
                         }
+
                         Text(text = "tokenizerCost: ${tokenizerCost.value} ms")
 
                         Button(onClick = { testTextEncoder() }) {
@@ -69,14 +79,12 @@ class MainActivity : ComponentActivity() {
                             Text(text = "encode batch images in MultiThread")
                         }
 
-
                         Button(onClick = { testBatchONNX() }) {
                             Text(text = "testBatchONNX")
                         }
                         Button(onClick = { testMultiThreadONNX() }) {
                             Text(text = "testMultiThreadONNX")
                         }
-
 
                         Text(text = encodeImageState1.value)
                         Text(text = encodeImageState2.value)
@@ -86,7 +94,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private var tokenizerCost: MutableState<Long> = mutableStateOf(0L)
+    var imageListExpanded = mutableStateOf(false)
+    private var selectedImage = mutableStateOf(imageList[0])
+    private var tokenizerCost = mutableStateOf(0L)
     private var encodeTextCost: MutableState<Long> = mutableStateOf(0L)
     private var encodeImageCost: MutableState<Long> = mutableStateOf(0L)
     private var encodeImageState1: MutableState<String> = mutableStateOf("None")
@@ -98,6 +108,8 @@ class MainActivity : ComponentActivity() {
     private var imageEncoder: ImageEncoder? = null
     private var textEncoderONNX: TextEncoderONNX? = null
     private var imageEncoderONNX: ImageEncoderONNX? = null
+
+    private var imagePath: String = ""
 
     private fun testTextEncoder() {
         if (textEncoder == null) {
@@ -116,30 +128,26 @@ class MainActivity : ComponentActivity() {
 //        Log.d("testTextEncoder", Arrays.toString(output?.dataAsFloatArray))
     }
 
-    private val imageName = "image.jpg"
-
     private fun testImageEncoder() {
         lifecycleScope.launch {
             if (imageEncoderONNX == null) {
-                imageEncoderONNX = ImageEncoderONNX(this@MainActivity)
+                loadImageEncoderONNX()
             }
-
-            // creating bitmap from packaged into app android asset 'image.jpg',
-            // app/src/main/assets/image.jpg
             val time = System.currentTimeMillis()
-            val bitmap: Bitmap? = BitmapFactory.decodeStream(assets.open(imageName))
-            Log.d("decodeStream", "${System.currentTimeMillis() - time} ms")
-            if (bitmap == null) {
-                Toast.makeText(this@MainActivity, "无法解码图片", Toast.LENGTH_LONG).show()
-                encodeImageCost.value = 0
-                return@launch
+            // 120ms+ for loading 4096px, 4.7MB JPEG
+//            val bitmap = BitmapFactory.decodeFile(filesDir.path + "/" + selectedImage.value)
+            // 70ms for loading 4096px, 4.7MB JPEG
+//            val bitmap = decodeSampledBitmapFromFile(imagePath, 224, 224)
+            // 64ms for loading 4096px, 4.7MB JPEG
+            val bitmap = withContext(Dispatchers.IO) {
+                loadThumbnail(this@MainActivity, imagePath)
             }
-//        val output = imageEncoder?.encode(bitmap)
+            Log.d("loadImage", "${System.currentTimeMillis() - time} ms")
+            saveBitMap(this@MainActivity, bitmap, "decodeSampledBitmapFromFile")
             val output = imageEncoderONNX?.encode(bitmap)
             encodeImageCost.value = System.currentTimeMillis() - time
             Log.d("testImageEncoder", Arrays.toString(output))
         }
-
     }
 
     private fun loadImageEncoder() {
@@ -157,16 +165,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadImageEncoderONNX() {
-        lifecycleScope.launch(Dispatchers.Main) {
-            withContext(Dispatchers.Default) {
-                if (imageEncoder == null) {
-                    encodeImageState1.value = "Loading ImageEncoder ONNX ..."
-                    encodeImageState2.value = "Loading ImageEncoder ONNX ..."
-                    imageEncoderONNX = ImageEncoderONNX(context = this@MainActivity)
-                    encodeImageState1.value = "Loading ImageEncoder ONNX done"
-                    encodeImageState2.value = "Loading ImageEncoder ONNX done"
-                }
-            }
+        if (imageEncoderONNX == null) {
+            encodeImageState1.value = "Loading ImageEncoder ONNX ..."
+            encodeImageState2.value = "Loading ImageEncoder ONNX ..."
+            imageEncoderONNX = ImageEncoderONNX(context = this@MainActivity)
+            encodeImageState1.value = "Loading ImageEncoder ONNX done"
+            encodeImageState2.value = "Loading ImageEncoder ONNX done"
         }
     }
 
@@ -183,12 +187,18 @@ class MainActivity : ComponentActivity() {
     private var batchTestLock = false
 
     /**
-     * With SnapDragon 8+ gen 1 SoC:
-     * - Encoding 100 images for ~11s
-     * - Encoding 2000 images for ~25s
+     * With SnapDragon 8+ gen 1 SoC, ONNX model:
+     * - 500pics @ ~54s, 400px, 21KB, fp32
+     * - 500pics @ ~20s, 400px, 21KB, int8
+     * - 500pics @ ~27s, 1000px, 779KB, int8
+     * - 500pics @ ~60s, 4096px, 1.7MB, int8
+     * - 500pics @ ~87s, 4096px, 4MB, int8
+     *
+     * Decoding stream costs more time than model inference time
+     * if the image is large.
      */
     private fun testBatchEncodeImage() {
-        assetFilePath(this, imageName)
+        assetFilePath(this, selectedImage.value)
         if (imageEncoder == null) {
             loadImageEncoder()
             return
@@ -203,27 +213,22 @@ class MainActivity : ComponentActivity() {
                 val total = 500
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
-//                    val bitmap = BitmapFactory.decodeStream(assets.open(imageName))
+//                    val bitmap = BitmapFactory.decodeStream(assets.open(selectedImage.value))
                     val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (imageName)).inputStream())
+                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
                     imageEncoder?.encode(bitmap)
                     if (i % 10 == 0) {
-                        encodeImageState1.value = "Processing `$imageName`: $i / $total"
+                        encodeImageState1.value = "Processing `${selectedImage.value}`: $i / $total"
                     }
                 }
                 encodeImageState1.value =
-                    "Processed: $total `$imageName` images in ${System.currentTimeMillis() - start} ms"
+                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
                 batchTestLock = false
             }
         }
     }
 
     private fun testBatchONNX() {
-        assetFilePath(this, imageName)
-        if (imageEncoderONNX == null) {
-            loadImageEncoderONNX()
-            return
-        }
         if (batchTestLock) {
             Toast.makeText(this, "Already Running batch test!", Toast.LENGTH_SHORT).show()
             return
@@ -231,29 +236,40 @@ class MainActivity : ComponentActivity() {
         batchTestLock = true
         lifecycleScope.launch(Dispatchers.Main) {
             withContext(Dispatchers.Default) {
+                if (imageEncoderONNX == null) {
+                    loadImageEncoderONNX()
+                }
                 val total = 500
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
-//                    val bitmap = BitmapFactory.decodeStream(assets.open(imageName))
+//                    val bitmap = BitmapFactory.decodeStream(assets.open(selectedImage.value))
                     val _start = System.currentTimeMillis()
-                    val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (imageName)).inputStream())
+//                    val bitmap = loadThumbnail(this@MainActivity, imagePath)
+                    val bitmap = withContext(Dispatchers.IO) {
+                        loadThumbnail(this@MainActivity, imagePath)
+                    }
+//                    val bitmap = decodeSampledBitmapFromFile(
+//                        filesDir.path + "/" + selectedImage.value,
+//                        reqHeight = 224,
+//                        reqWidth = 224
+//                    )
                     Log.d("decodeStream", "${System.currentTimeMillis() - _start} ms")
+                    saveBitMap(this@MainActivity, bitmap, "temp-224.jpg")
                     imageEncoderONNX?.encode(bitmap)
                     if (i % 10 == 0) {
                         encodeImageState1.value =
-                            "Processing `$imageName`: $i / $total using ONNX..."
+                            "Processing `${selectedImage.value}`: $i / $total using ONNX..."
                     }
                 }
                 encodeImageState1.value =
-                    "Processed: $total `$imageName` images in ${System.currentTimeMillis() - start} ms using ONNX."
+                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms using ONNX."
                 batchTestLock = false
             }
         }
     }
 
     private fun testMultiThreadONNX() {
-        assetFilePath(this, imageName)
+        assetFilePath(this, selectedImage.value)
         if (imageEncoderONNX == null) {
             loadImageEncoderONNX()
             return
@@ -268,14 +284,14 @@ class MainActivity : ComponentActivity() {
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
                     val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (imageName)).inputStream())
+                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
                     imageEncoderONNX?.encode(bitmap)
                     if (i % 10 == 0) {
-                        encodeImageState1.value = "Processing `$imageName`: $i / $total"
+                        encodeImageState1.value = "Processing `${selectedImage.value}`: $i / $total"
                     }
                 }
                 encodeImageState1.value =
-                    "Processed: $total `$imageName` images in ${System.currentTimeMillis() - start} ms"
+                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
                 encodeLock1 = false
             }
         }
@@ -289,14 +305,14 @@ class MainActivity : ComponentActivity() {
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
                     val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (imageName)).inputStream())
+                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
                     imageEncoderONNX?.encode(bitmap)
                     if (i % 10 == 0) {
-                        encodeImageState2.value = "Processing `$imageName`: $i / $total"
+                        encodeImageState2.value = "Processing `${selectedImage.value}`: $i / $total"
                     }
                 }
                 encodeImageState2.value =
-                    "Processed: $total `$imageName` images in ${System.currentTimeMillis() - start} ms"
+                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
             }
             encodeLock2 = false
         }
@@ -305,7 +321,7 @@ class MainActivity : ComponentActivity() {
     var encodeLock1 = false
     var encodeLock2 = false
     private fun testMultiThread() {
-        assetFilePath(this, imageName)
+        assetFilePath(this, selectedImage.value)
         if (imageEncoder == null) {
             loadImageEncoder()
             return
@@ -320,14 +336,14 @@ class MainActivity : ComponentActivity() {
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
                     val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (imageName)).inputStream())
+                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
                     imageEncoder?.encode(bitmap)
                     if (i % 10 == 0) {
-                        encodeImageState1.value = "Processing `$imageName`: $i / $total"
+                        encodeImageState1.value = "Processing `${selectedImage.value}`: $i / $total"
                     }
                 }
                 encodeImageState1.value =
-                    "Processed: $total `$imageName` images in ${System.currentTimeMillis() - start} ms"
+                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
                 encodeLock1 = false
             }
         }
@@ -341,34 +357,29 @@ class MainActivity : ComponentActivity() {
                 val start = System.currentTimeMillis()
                 for (i in 0..total) {
                     val bitmap =
-                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (imageName)).inputStream())
+                        BitmapFactory.decodeStream(File(filesDir.path + "/" + (selectedImage.value)).inputStream())
                     imageEncoder?.encode(bitmap)
                     if (i % 10 == 0) {
-                        encodeImageState2.value = "Processing `$imageName`: $i / $total"
+                        encodeImageState2.value = "Processing `${selectedImage.value}`: $i / $total"
                     }
                 }
                 encodeImageState2.value =
-                    "Processed: $total `$imageName` images in ${System.currentTimeMillis() - start} ms"
+                    "Processed: $total `${selectedImage.value}` images in ${System.currentTimeMillis() - start} ms"
             }
             encodeLock2 = false
         }
     }
 
-    private fun testTokenizer() {
-        tokenizer = tokenizer ?: BPETokenizer(this)
-
-        val text = "A bird flying in the sky, cloudy"
-        Log.i("testTokenizer", "start...")
-        val time = System.currentTimeMillis()
-        val tensor = tokenizer?.tokenize(text)
-        tokenizerCost.value = System.currentTimeMillis() - time
-//        Log.i("testTokenizer", Arrays.toString(tensor?.dataAsIntArray))
+    private fun setImage(im: String) {
+        imageListExpanded.value = false
+        selectedImage.value = im
+        imagePath = assetFilePath(this@MainActivity, selectedImage.value).toString()
     }
 }
 
 @Composable
 fun Greeting(name: String) {
-    Text(text = "Hello $name!")
+    Text(text = "Testing: $name!")
 }
 
 @Preview(showBackground = true)

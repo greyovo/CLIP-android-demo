@@ -1,27 +1,23 @@
 package com.example.mycomposeapplication
 
-import android.R.attr
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.ImageFormat
+import android.graphics.*
 import android.media.Image
 import android.media.Image.Plane
 import android.media.ImageReader
-import androidx.compose.ui.graphics.ImageBitmap
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.SimpleTarget
+import com.bumptech.glide.request.transition.Transition
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
-
-import android.graphics.*
-import android.util.Log
-import java.nio.ByteOrder
 import java.nio.FloatBuffer
-import java.nio.ShortBuffer
-import java.util.Arrays
-import kotlin.math.roundToInt
 
 @Throws(IOException::class)
 fun assetFilePath(context: Context, assetName: String): String? {
@@ -123,49 +119,78 @@ fun bitmapToFloatBuffer(bitmap: Bitmap): FloatBuffer {
     return imgData
 }
 
-fun floatBufferToFloat16Buffer(floatBuffer: FloatBuffer): ShortBuffer {
-//    val byteBuffer = ByteBuffer.allocate(floatArray.size * 2).order(ByteOrder.nativeOrder())
-//    val floatBuffer = byteBuffer.asShortBuffer()
-//    for (f in floatArray) {
-//        floatBuffer.put(floatToHalf(f))
-//    }
-//    floatBuffer.rewind()
-//    return floatBuffer
-    val shortBuffer: ShortBuffer = ShortBuffer.allocate(floatBuffer.limit())
-    while (floatBuffer.hasRemaining()) {
-        val floatValue = floatBuffer.get()
-        val shortValue = floatToHalf(floatValue)
-        shortBuffer.put(shortValue)
+/**
+ * https://developer.android.google.cn/topic/performance/graphics/load-bitmap?hl=zh-cn
+ * */
+fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    // Raw height and width of image
+    val (height: Int, width: Int) = options.run { outHeight to outWidth }
+    var inSampleSize = 1
+
+    if (height > reqHeight || width > reqWidth) {
+
+        val halfHeight: Int = height / 2
+        val halfWidth: Int = width / 2
+
+        // Calculate the largest inSampleSize value that is a power of 2 and keeps both
+        // height and width larger than the requested height and width.
+        while (halfHeight / inSampleSize >= reqHeight && halfWidth / inSampleSize >= reqWidth) {
+            inSampleSize *= 2
+        }
     }
-    shortBuffer.rewind()
-    return shortBuffer
+
+    return inSampleSize
 }
 
-private fun floatToHalf(f: Float): Short {
-    val bits = java.lang.Float.floatToIntBits(f)
-    val s = (bits shr 16) and 0x8000 // sign
-    var e = (bits shr 23) and 0xff // exponent
-    var m = bits and 0x7fffff // mantissa
-    if (e == 0) {
-        if (m == 0) {
-            return (s or 0x0000).toShort() // +/-0
-        } else {
-            while (m and 0x800000 == 0) {
-                m = m shl 1
-                e -= 1
-            }
-            e += 1
-            m = m and 0x7fffff
-        }
-    } else if (e == 0xff) {
-        if (m == 0) {
-            return (s or 0x7c00).toShort() // +/-inf
-        } else {
-            return (s or 0x7c00 or ((m shr 13) and 0x03ff)).toShort() // NaN
-        }
-    } else {
-        e += (15 - 127)
-        m = m shr 13
+/**
+ * https://developer.android.google.cn/topic/performance/graphics/load-bitmap?hl=zh-cn
+ * */
+fun decodeSampledBitmapFromFile(
+    pathName: String,
+    reqWidth: Int,
+    reqHeight: Int
+): Bitmap {
+    // First decode with inJustDecodeBounds=true to check dimensions
+    return BitmapFactory.Options().run {
+        inJustDecodeBounds = true
+        BitmapFactory.decodeFile(pathName, this)
+
+        // Calculate inSampleSize
+        inSampleSize = calculateInSampleSize(this, reqWidth, reqHeight)
+
+        // Decode bitmap with inSampleSize set
+        inJustDecodeBounds = false
+
+        BitmapFactory.decodeFile(pathName, this)
     }
-    return (s or (e shl 10) or m).toShort()
+
+}
+
+fun saveBitMap(context: Context, bitmap: Bitmap, name: String) {
+    try {
+        val file = File(context.filesDir.path + "/$name.png")
+        if (!file.exists()) {
+            file.createNewFile()
+        }
+        val out = FileOutputStream(file)
+
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+
+        // 刷新输出流并关闭
+        out.flush()
+        out.close()
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+}
+
+fun loadThumbnail(context: Context, imagePath: String): Bitmap {
+    return Glide.with(context)
+        .asBitmap()
+        .load(imagePath)
+        .diskCacheStrategy(DiskCacheStrategy.NONE)
+        .downsample(DownsampleStrategy.FIT_CENTER)
+        .apply(RequestOptions().override(224, 224))
+        .skipMemoryCache(true)
+        .submit().get()
 }
