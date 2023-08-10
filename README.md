@@ -15,7 +15,7 @@ Then build and run in your IDE.
 
 
 
-> Note: Do NOT use `PyTorch > 2.0` or it will failed in converting to ONNX format.
+> Note: Do NOT use `PyTorch > 1.13` or it will failed when converting to ONNX format.
 >
 > This project is just for testing, so forgive my casual code. Good luck :)
 
@@ -60,7 +60,7 @@ Encode 500 pics in single thread:
 
 **Note:**
 
-- The encode time for each image is around 35~45ms
+- The encode time for each image is 35~45ms
 - For images with larger on-disk size, it takes more time to read the image. I have tried ''down-sample'' the large image instead of reading the whole file.
 
 
