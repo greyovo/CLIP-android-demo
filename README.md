@@ -28,23 +28,23 @@ Accuracy compared to original CLIP ViT-B/32 model:
 | 2000 pics | 0.825 | 0.871           | -0.046 |
 | 5000 pics | 0.830 | 0.940           | -0.11  |
 
-Encoding 500 pics costs:
+Encode 500 pics in single thread:
 
 > Device: Xiaomi 12S @ Snapdragon 8+ Gen 1
 
-| Resolution | Disk size | Model | Time |
-| ---------- | --------- | ----- | ---- |
-| 400px      | 21KB      | fp32  | ~54s |
-| 400px      | 21KB      | int8  | ~20s |
-| 1000px     | 779KB     | fp32  | ~62s |
-| 1000px     | 779KB     | int8  | ~27s |
-| 4096px     | 1.7MB     | int8  | ~60s |
-| 4096px     | 4MB       | int8  | ~87s |
+| Resolution | On-disk Size | Model | Time |
+| ---------- | ------------ | ----- | ---- |
+| 400px      | 21KB         | fp32  | ~54s |
+| 400px      | 21KB         | int8  | ~20s |
+| 1000px     | 779KB        | fp32  | ~62s |
+| 1000px     | 779KB        | int8  | ~27s |
+| 4096px     | 1.7MB        | int8  | ~60s |
+| 4096px     | 4MB          | int8  | ~87s |
 
 **Note:**
 
-- The encode time for each image is around 40~60ms
-- For images with larger disk size (rather than resolution), it takes more time to read the image. I have tried ''down-sample'' the large image instead of reading the whole file.
+- The encode time for each image is around 35~45ms
+- For images with larger on-disk size, it takes more time to read the image. I have tried ''down-sample'' the large image instead of reading the whole file.
 
 
 
