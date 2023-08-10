@@ -1,6 +1,6 @@
 # CLIP-lite-android-demo
 
-A demo for running quantized CLIP model on Android.
+A demo for running quantized CLIP model (ViT-B/32) on Android.
 
 ## Usage
 
@@ -15,11 +15,26 @@ Then build and run in your IDE.
 
 
 
-> Just for testing code, the structure is very casual. Good luck :)
+> Note: Do NOT use `PyTorch > 2.0` or it will failed in converting to ONNX format.
+>
+> This project is just for testing, so forgive my casual code. Good luck :)
 
 
 
 ## Performance
+
+### Model Size
+
+- Original (Float 32)
+  - ImageEncoder: 335 MB
+  - TextEncoder: 242 MB
+- Quantized (Int8)
+  - ImageEncoder: 91.2 MB
+  - TextEncoder: 61.3 MB
+
+
+
+### Loss
 
 Accuracy compared to original CLIP ViT-B/32 model:
 
@@ -27,6 +42,8 @@ Accuracy compared to original CLIP ViT-B/32 model:
 | --------- | ----- | --------------- | ------ |
 | 2000 pics | 0.825 | 0.871           | -0.046 |
 | 5000 pics | 0.830 | 0.940           | -0.11  |
+
+### Speed
 
 Encode 500 pics in single thread:
 
