@@ -5,6 +5,7 @@ import android.graphics.*
 import android.media.Image
 import android.media.Image.Plane
 import android.media.ImageReader
+import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.widget.Toast
@@ -40,8 +41,10 @@ fun assetFilePath(context: Context, assetName: String): String? {
             return file.absolutePath
         }
     } catch (_: Exception) {
-        Looper.prepare()
-        Toast.makeText(context, "Load asset failed: $assetName", Toast.LENGTH_SHORT).show()
+        val handler = Handler(Looper.getMainLooper())
+        handler.post {
+            Toast.makeText(context, "Load asset failed: $assetName", Toast.LENGTH_SHORT).show()
+        }
         return null
     }
 
