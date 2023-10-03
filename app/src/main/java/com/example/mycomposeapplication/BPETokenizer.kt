@@ -10,49 +10,6 @@ import java.util.*
 import java.util.regex.Pattern
 import java.util.zip.GZIPInputStream
 
-
-//fun bytesToUnicode(): Map<Byte, String> {
-//    val charset = Charset.forName("UTF-8")
-//    val bytes = ByteArray(256) { it.toByte() }
-//    val buffer = ByteBuffer.wrap(bytes)
-//    val unicodeChars = charset.decode(buffer).toString().toCharArray().map { it.toString() }
-//
-//    return bytes.mapIndexed { index, byte ->
-//        byte to unicodeChars[index]
-//    }.toMap()
-//}
-
-private fun createCharDict(): Map<Int, Char> {
-    val bytesList = mutableListOf<Int>()
-    bytesList.addAll(33..126)
-    bytesList.addAll(161..172)
-    bytesList.addAll(174..255)
-    val charList = bytesList.toMutableList()
-    var n = 0
-    for (b in 0..255) {
-        if (b !in bytesList) {
-            bytesList.add(b)
-            charList.add(256 + n)
-            n++
-        }
-    }
-    return bytesList.zip(charList.map { it.toChar() }).toMap()
-}
-
-private fun readGzipFile(context: Context, assetName: String): List<String> {
-    val filePath = assetFilePath(context, assetName)
-    val result = mutableListOf<String>()
-    val inputStream = GZIPInputStream(FileInputStream(File(filePath!!)))
-    val reader = BufferedReader(InputStreamReader(inputStream, "UTF-8"))
-    var line: String?
-    while (reader.readLine().also { line = it } != null) {
-        result.add(line!!)
-    }
-    reader.close()
-    inputStream.close()
-    return result
-}
-
 class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
 
     private val byteEncoder = createCharDict()
@@ -97,14 +54,13 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
             return cache[token]!!
         }
 
-        var word: MutableList<String> = token.dropLast(1).map { it.toString() }.toMutableList()
+        var word = token.dropLast(1).map { it.toString() }.toMutableList()
         word.add(token.last().toString() + "</w>")
-        var pairs: List<Pair<String, String>> = getPairs(word)
+        var pairs = getPairs(word)
 
         if (pairs.isEmpty()) {
             return "$token</w>"
         }
-//        var result = mutableListOf<String>()
         while (true) {
             val bigram: Pair<String, String> =
                 pairs.minByOrNull { bpeRanks[it] ?: Int.MAX_VALUE } ?: break
@@ -115,9 +71,10 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
             val newWord = mutableListOf<String>()
             var i = 0
             while (i < word.size) {
-                val j = word.subList(i, word.size).indexOf(first)
+                var j = word.subList(i, word.size).indexOf(first)
                 if (j != -1) {
-                    newWord.addAll(word.subList(i, j + i))
+                    j += i
+                    newWord.addAll(word.subList(i, j))
                     i = j
                 } else {
                     newWord.addAll(word.subList(i, word.size))
@@ -135,14 +92,14 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
             word = newWord
 
             if (word.size == 1) break
-            else pairs = getPairs(word.toList())
+            else pairs = getPairs(word)
         }
         val result = word.joinToString(" ")
         cache[token] = result
         return result
     }
 
-    fun encode(text: String): List<Int> {
+    private fun encode(text: String): List<Int> {
         val cleanedText = whitespaceClean(text).lowercase()
         val matcher = pat.matcher(cleanedText)
         val matches = mutableListOf<String>()
@@ -158,8 +115,8 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
 //        return bpe_tokens
         for (token in matches) {
             val encodedToken = token.toByteArray().map { byteEncoder[it.toInt()] }.joinToString("")
-            for (bpe_token in bpe(encodedToken).split(" ")) {
-                bpeTokens.add(encoder[bpe_token]!!)
+            for (bpeToken in bpe(encodedToken).split(" ")) {
+                bpeTokens.add(encoder[bpeToken]!!)
             }
         }
         return bpeTokens
@@ -206,8 +163,40 @@ class BPETokenizer(context: Context, bpePath: String = "bpe_vocab") {
 
 }
 
-private fun getPairs(word: List<String>): List<Pair<String, String>> {
-    return word.zipWithNext().map { it.first to it.second }
+
+private fun createCharDict(): Map<Int, Char> {
+    val bytesList = mutableListOf<Int>()
+    bytesList.addAll(33..126)
+    bytesList.addAll(161..172)
+    bytesList.addAll(174..255)
+    val charList = bytesList.toMutableList()
+    var n = 0
+    for (b in 0..255) {
+        if (b !in bytesList) {
+            bytesList.add(b)
+            charList.add(256 + n)
+            n++
+        }
+    }
+    return bytesList.zip(charList.map { it.toChar() }).toMap()
+}
+
+private fun readGzipFile(context: Context, assetName: String): List<String> {
+    val filePath = assetFilePath(context, assetName)
+    val result = mutableListOf<String>()
+    val inputStream = GZIPInputStream(FileInputStream(File(filePath!!)))
+    val reader = BufferedReader(InputStreamReader(inputStream, "UTF-8"))
+    var line: String?
+    while (reader.readLine().also { line = it } != null) {
+        result.add(line!!)
+    }
+    reader.close()
+    inputStream.close()
+    return result
+}
+
+private fun getPairs(word: List<String>): Set<Pair<String, String>> {
+    return word.zipWithNext().map { it.first to it.second }.toSet()
 }
 
 private fun whitespaceClean(text: String): String {
