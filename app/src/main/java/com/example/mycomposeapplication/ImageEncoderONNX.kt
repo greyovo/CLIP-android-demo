@@ -31,6 +31,11 @@ class ImageEncoderONNX(private val context: MainActivity, useQuantizedModel: Boo
         ortSession = createOrtSession()
     }
 
+    fun close() {
+        ortSession?.close()
+        ortEnv?.close()
+    }
+
     private fun createOrtSession(): OrtSession? {
         val p = assetFilePath(context, modelPath) ?: return null
         return ortEnv?.createSession(p)

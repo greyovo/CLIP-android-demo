@@ -1,14 +1,15 @@
 package com.example.mycomposeapplication
 
 import android.graphics.BitmapFactory
-import android.media.Image
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -112,6 +113,23 @@ class MainActivity : ComponentActivity() {
 
                         Text(text = encodeImageState1.value)
                         Text(text = encodeImageState2.value)
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Use Quantized Model")
+                            Switch(
+                                checked = useQuantizedModel.value,
+                                onCheckedChange = { newState ->
+                                    useQuantizedModel.value = newState
+                                    textEncoderONNX?.close()
+                                    imageEncoderONNX?.close()
+                                    textEncoderONNX = null
+                                    imageEncoderONNX = null
+                                    // You can also call any other logic that needs to run when the state changes
+                                }
+                            )
+                        }
                         Button(onClick = { testScoring() }) {
                             Text(text = "testScore")
                         }
@@ -134,6 +152,7 @@ class MainActivity : ComponentActivity() {
     private var encodeImageState2: MutableState<String> = mutableStateOf("None")
     private var scoreState: MutableState<String> = mutableStateOf("")
     private var imagePathState: MutableState<String> = mutableStateOf("")
+    private var useQuantizedModel: MutableState<Boolean> = mutableStateOf(true)
 
     private var textEncoderONNX: TextEncoderONNX? = null
     private var imageEncoderONNX: ImageEncoderONNX? = null
@@ -153,6 +172,7 @@ class MainActivity : ComponentActivity() {
             encodeTextCost.value = System.currentTimeMillis() - time
         }
     }
+
 
     private fun testImageEncoder() {
         lifecycleScope.launch {
@@ -216,7 +236,7 @@ class MainActivity : ComponentActivity() {
         if (imageEncoderONNX == null) {
             encodeImageState1.value = "Loading ImageEncoder ONNX ..."
             encodeImageState2.value = "Loading ImageEncoder ONNX ..."
-            imageEncoderONNX = ImageEncoderONNX(context = this@MainActivity)
+            imageEncoderONNX = ImageEncoderONNX(context = this@MainActivity, useQuantizedModel.value)
             encodeImageState1.value = "Loading ImageEncoder ONNX done"
             encodeImageState2.value = "Loading ImageEncoder ONNX done"
         }
@@ -227,7 +247,7 @@ class MainActivity : ComponentActivity() {
         withContext(Dispatchers.Default) {
             if (textEncoderONNX == null) {
                 Log.i(this.javaClass.canonicalName, "Starting loading textEncoder")
-                textEncoderONNX = TextEncoderONNX(context = this@MainActivity)
+                textEncoderONNX = TextEncoderONNX(context = this@MainActivity, useQuantizedModel.value)
                 Log.i(this.javaClass.canonicalName, "Done loading textEncoder")
             }
         }

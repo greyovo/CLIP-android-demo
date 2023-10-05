@@ -25,6 +25,11 @@ class TextEncoderONNX(private val context: Context, useQuantizedModel: Boolean =
         tokenizer = BPETokenizer(context)
     }
 
+    fun close() {
+        ortSession?.close()
+        ortEnv?.close()
+    }
+
     private fun createOrtSession(): OrtSession? {
         val p = assetFilePath(context, modelPath) ?: return null
         return ortEnv?.createSession(p)
