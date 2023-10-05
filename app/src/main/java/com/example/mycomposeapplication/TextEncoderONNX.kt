@@ -4,19 +4,17 @@ import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.content.Context
-import android.graphics.Bitmap
-import android.os.SystemClock
-import android.util.Log
 import android.widget.Toast
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.pytorch.*
 import java.nio.IntBuffer
 import java.util.*
 
-class TextEncoderONNX(private val context: Context) {
-    private val modelPath = "clip-text-encoder-quant-int8.onnx"
-
+class TextEncoderONNX(private val context: Context, useQuantizedModel: Boolean = true)  {
+    private val modelPath = if (useQuantizedModel) {
+        "clip-text-encoder-quant-int8.onnx"
+    } else {
+        "clip-text-encoder.onnx"
+    }
     private var ortEnv: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
     private var tokenizer: BPETokenizer? = null
@@ -24,6 +22,12 @@ class TextEncoderONNX(private val context: Context) {
     init {
         ortEnv = OrtEnvironment.getEnvironment()
         ortSession = createOrtSession()
+        tokenizer = BPETokenizer(context)
+    }
+
+    fun close() {
+        ortSession?.close()
+        ortEnv?.close()
     }
 
     private fun createOrtSession(): OrtSession? {

@@ -2,9 +2,6 @@ package com.example.mycomposeapplication
 
 import android.content.Context
 import android.graphics.*
-import android.media.Image
-import android.media.Image.Plane
-import android.media.ImageReader
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -12,15 +9,12 @@ import android.widget.Toast
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.ByteBuffer
-import java.nio.FloatBuffer
+import kotlin.math.sqrt
 
 @Throws(IOException::class)
 fun assetFilePath(context: Context, assetName: String): String? {
@@ -114,6 +108,41 @@ fun saveBitMap(context: Context, bitmap: Bitmap, name: String) {
         e.printStackTrace()
     }
 }
+
+fun computeScore(imageEmbedding: FloatArray, textEmbedding: FloatArray): Double {
+    print("starting store computation")
+    require(imageEmbedding.size == textEmbedding.size) { "The two embeddings should have the same length" }
+
+    var score = 0.0
+    var imageNormalization = 0.0
+    var textNormalization = 0.0
+
+    for (index in imageEmbedding.indices) {
+        imageNormalization += imageEmbedding[index] * imageEmbedding[index]
+        textNormalization += textEmbedding[index] * textEmbedding[index]
+    }
+
+    imageNormalization = sqrt(imageNormalization)
+    textNormalization = sqrt(textNormalization)
+
+    for (index in imageEmbedding.indices) {
+        imageEmbedding[index] /= imageNormalization.toFloat()
+        textEmbedding[index] /= textNormalization.toFloat()
+    }
+
+    for (index in imageEmbedding.indices) {
+        score += imageEmbedding[index] * textEmbedding[index]
+    }
+    Log.d("score", "imagePart1 " + imageEmbedding.sliceArray(0 until 256).joinToString(", "))
+    Log.d("score" , "imagePart2 " + imageEmbedding.sliceArray(256 until 512).joinToString(", "))
+    Log.d("score", "textPart1 " + textEmbedding.sliceArray(0 until 256).joinToString(", "))
+    Log.d("score" , "textPart2 " + textEmbedding.sliceArray(256 until 512).joinToString(", "))
+    Log.d("score", "score value " + score.toString())
+
+
+    return score
+}
+
 
 suspend fun loadThumbnail(context: Context, imagePath: String): Bitmap {
     fun needLazyLoad(): Boolean {
