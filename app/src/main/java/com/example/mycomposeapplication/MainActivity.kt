@@ -104,15 +104,18 @@ class MainActivity : ComponentActivity() {
 
     private var imagePath: String = ""
 
-    private fun testTextEncoder() {
-        if (textEncoderONNX == null) {
-            loadTextEncoderONNX()
+    private  fun testTextEncoder() {
+        lifecycleScope.launch(Dispatchers.Main) {
+            if (textEncoderONNX == null) {
+                loadTextEncoderONNX()
+            }
+            val text = "A bird flying in the sky, cloudy"
+            Log.i("testTextEncoder", "start...")
+            val time = System.currentTimeMillis()
+            textEncoderONNX?.encode(text)
+
+            encodeTextCost.value = System.currentTimeMillis() - time
         }
-        val text = "A bird flying in the sky, cloudy"
-        Log.i("testTextEncoder", "start...")
-        val time = System.currentTimeMillis()
-        textEncoderONNX?.encode(text)
-        encodeTextCost.value = System.currentTimeMillis() - time
     }
 
     private fun testImageEncoder() {
@@ -145,15 +148,17 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun loadTextEncoderONNX() {
-        lifecycleScope.launch(Dispatchers.Main) {
-            withContext(Dispatchers.Default) {
-                if (textEncoderONNX == null) {
-                    textEncoderONNX = TextEncoderONNX(context = this@MainActivity)
-                }
+    private suspend fun loadTextEncoderONNX() {
+        Log.i(this.javaClass.canonicalName, "init loading textEncoderONNX")
+        withContext(Dispatchers.Default) {
+            if (textEncoderONNX == null) {
+                Log.i(this.javaClass.canonicalName, "Starting loading textEncoder")
+                textEncoderONNX = TextEncoderONNX(context = this@MainActivity)
+                Log.i(this.javaClass.canonicalName, "Done loading textEncoder")
             }
         }
     }
+
 
     private var batchTestLock = false
 
