@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Use Quantized Model")
+                            PaddingValues(vertical = 4.dp)
                             Switch(
                                 checked = useQuantizedModel.value,
                                 onCheckedChange = { newState ->
