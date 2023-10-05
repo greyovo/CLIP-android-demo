@@ -24,6 +24,7 @@ class TextEncoderONNX(private val context: Context) {
     init {
         ortEnv = OrtEnvironment.getEnvironment()
         ortSession = createOrtSession()
+        tokenizer = BPETokenizer(context)
     }
 
     private fun createOrtSession(): OrtSession? {
