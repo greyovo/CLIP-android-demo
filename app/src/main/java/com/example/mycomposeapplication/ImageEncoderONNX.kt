@@ -3,26 +3,25 @@ package com.example.mycomposeapplication
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
-import ai.onnxruntime.providers.NNAPIFlags
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.util.Log
 import android.widget.Toast
 import org.pytorch.*
 import org.pytorch.torchvision.TensorImageUtils
-import java.io.File
-import java.io.FileOutputStream
 import java.util.*
-import kotlin.math.max
 
 
-class ImageEncoderONNX(private val context: MainActivity) {
+class ImageEncoderONNX(private val context: MainActivity, useQuantizedModel: Boolean = true) {
     companion object {
         val normMeanRGB = floatArrayOf(0.48145467f, 0.4578275f, 0.40821072f)
         val normStdRGB = floatArrayOf(0.26862955f, 0.2613026f, 0.2757771f)
     }
-
-    private val modelPath = "clip-image-encoder-quant-int8.onnx"
+    private val modelPath = if (useQuantizedModel) {
+        "clip-image-encoder-quant-int8.onnx"
+    } else {
+        "clip-image-encoder.onnx"
+    }
 
     private var ortEnv: OrtEnvironment? = null
     private var ortSession: OrtSession? = null
