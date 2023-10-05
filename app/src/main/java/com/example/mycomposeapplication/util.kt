@@ -133,6 +133,12 @@ fun computeScore(imageEmbedding: FloatArray, textEmbedding: FloatArray): Double 
     for (index in imageEmbedding.indices) {
         score += imageEmbedding[index] * textEmbedding[index]
     }
+    Log.d("score", "imagePart1 " + imageEmbedding.sliceArray(0 until 256).joinToString(", "))
+    Log.d("score" , "imagePart2 " + imageEmbedding.sliceArray(256 until 512).joinToString(", "))
+    Log.d("score", "textPart1 " + textEmbedding.sliceArray(0 until 256).joinToString(", "))
+    Log.d("score" , "textPart2 " + textEmbedding.sliceArray(256 until 512).joinToString(", "))
+    Log.d("score", "score value " + score.toString())
+
 
     return score
 }
